@@ -3,7 +3,9 @@
 <head>
 	<meta charset="UTF-8">
 	<script src="../scripts/raphael-min.js"></script>
-	<script src="../scripts/jquery-1.4.1.js"></script>
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/3.7.2/jquery.min.js"></script>
+<script>	window.jQuery || document.write('<script src="../scripts/jquery-1.8.2.min.js"><\/script>')</script>
+	
 	<title>Path Generator</title>
 	<style type="text/css">
 		body
@@ -203,9 +205,6 @@
 		}
 	</style>
 	<script type="text/javascript">
-/*
-TODO: When you click on the rotate icon a second time, it stops the rotation and returns the path to its unrotated state.
-*/
 		var PathGenerator = function ()
 		{
 			/* Collection of the points that were clicked.*/
@@ -332,20 +331,8 @@ TODO: When you click on the rotate icon a second time, it stops the rotation and
 				{
 					raphaelPathContainer.click(function (e)
 					{
-						var localX = e.layerX;
-						if (!localX)
-						{
-							//TODO: do we fall in here on certain browsers? If so probably need to loop up thru parents and get total offset
-							debugger; var totalLeftOffset = $(e.currentTarget).parent().position().left;
-							localX = e.clientX - totalLeftOffset;
-						}
-						var localY = e.layerY;
-						if (!localY)
-						{
-							debugger; var totalTopOffset = $(e.currentTarget).parent().position().top;
-							localY = e.clientY - totalTopOffset;
-						}
-
+						var localX = getLocalX(e);
+						var localY = getLocalY(e);
 						setCenterOfRotation({ x: localX, y: localY });
 						rotateDisplay();
 					});
@@ -464,8 +451,8 @@ TODO: When you click on the rotate icon a second time, it stops the rotation and
 					$(".col4 .pgpopup").fadeIn(500);
 					$outputCanvas.click(function (e)
 					{
-						var localX = e.layerX;
-						var localY = e.layerY;
+						var localX = getLocalX(e);
+						var localY = getLocalY(e);
 						centerOfRotation = { x: localX, y: localY };
 						fillTranslatedPoints();
 						var currentRotation = 0;
@@ -557,10 +544,20 @@ TODO: When you click on the rotate icon a second time, it stops the rotation and
 				$containerElementofSrcPicture.unbind("click");
 				$containerElementofSrcPicture.click(function (e)
 				{
-					var localX = e.layerX || e.clientX - origin.left;
-					var localY = e.layerY || e.clientY - origin.top;
+					//debugger;
+					var localX = getLocalX(e);
+					var localY = getLocalY(e);
 					PathGenerator.AddPoint({ x: localX, y: localY });
 				});
+			},
+			getLocalX = function (e)
+			{
+				return e.layerX || e.clientX - $(e.currentTarget).offset().left;
+
+			},
+			getLocalY = function (e)
+			{
+				return e.layerY || e.clientY - $(e.currentTarget).offset().top;
 			},
 			$dotCanvas, dotDiv,
 			addEditDotToSrcImage = function ()
