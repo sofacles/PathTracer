@@ -1,0 +1,726 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<script src="../scripts/raphael-min.js"></script>
+	<script src="../scripts/jquery-1.4.1.js"></script>
+	<title>Path Generator</title>
+	<style type="text/css">
+		body
+		{
+			margin: 0;
+			padding: 0 0 0 1em;
+			font-family: Helvetica-neue, Arial, Verdana;
+		}
+		
+		.explanation
+		{
+			font-size: 0.8em;
+		}
+		h1
+		{
+			margin: 0 auto 0.2em auto;
+		}
+		div.tool
+		{
+			position: relative;
+			width: 100%;
+		}
+		div.col1, div.col2, div.col3, div.col4
+		{
+			height: 400px;
+			position: absolute;
+			top: 0px;
+		}
+		
+		div.col1
+		{
+			left: 0px;
+			width: 25%;
+		}
+		
+		div.col2
+		{
+			left: 26.5%;
+			width: 10%;
+		}
+		
+		div.col3
+		{
+			left: 37.5%;
+			width: 30%;
+		}
+		
+		div.col4
+		{
+			left: 69%;
+			width: 30%;
+		}
+		
+		
+		div.col1 div, div.col2 div, div.col3 div
+		{
+			border: 1px solid #000;
+			height: 90%;
+			position: absolute;
+			width: 100%;
+			top: 8%;
+		}
+		
+		div.col4 canvas
+		{
+			border: 1px solid #000;
+			position: absolute;
+			top: 8%;
+		}
+		
+		#editorHolder
+		{
+			overflow: auto;
+		}
+		
+		#editorHolder p
+		{
+			margin: 0;
+			padding: 0;
+		}
+		
+		#editorHolder p input[type="text"]
+		{
+			width: 2.2em;
+			margin: 0;
+			border: none;
+		}
+		
+		
+		.col1 .SmallControlToSE, .col1 .SmallControlToSW, .col3 .SmallControlToSE, .col4 .SmallControlToSE
+		{
+			border: none;
+			bottom: 12px;
+			height: 1em;
+			position: absolute;
+			right: 12px;
+			top: auto;
+			width: 1em;
+		}
+		
+		.col1 .SmallControlToSE, .col1 .SmallControlToSW
+		{
+			font-weight: bold;
+			bottom: -20px;
+			border: 1px solid #000;
+			line-height: 1.1em;
+			height: 1.3em;
+			text-align: center;
+		}
+		
+		.col1 .SmallControlToSE
+		{
+			width: 3em;
+			right: 0.5em;
+		}
+		
+		.col1 .SmallControlToSW
+		{
+			width: 4em;
+			left: 0.5em;
+		}
+		
+		.col1 .SmallControlToSE a, .col1 .SmallControlToSW a
+		{
+			color: #6c0;
+			text-decoration: none;
+			vertical-align: middle;
+		}
+		
+		h2
+		{
+			margin: 0;
+			padding: 0;
+		}
+		
+		#RaphaelPathHolder .pgpopup, .col4 .pgpopup
+		{
+			background-color: #eee;
+			border: 1px solid #000;
+			display: none;
+			height: 50%;
+			left: 25%;
+			position: absolute;
+			top: 25%;
+			width: 50%;
+			-moz-box-shadow: 3px 3px 4px #666;
+			-webkit-box-shadow: 3px 3px 4px #666;
+			box-shadow: 3px 3px 4px #666; /* For IE 8 */
+			-ms-filter: "progid:DXImageTransform.Microsoft.Shadow(Strength=4, Direction=135, Color='#666666')"; /* For IE 5.5 - 7 */
+			filter: progid:DXImageTransform.Microsoft.Shadow(Strength=4, Direction=135, Color='#666666');
+		}
+		#RaphaelPathHolder .pgpopup div, #CanvasPathHolder .pgpopup div
+		{
+			border: none;
+			margin: 10%;
+		}
+		
+		div#code
+		{
+			height: 150px;
+			position: absolute;
+			top: 425px;
+			width: 97.5%;
+			border: 1px solid #000;
+			padding: 0.6em;
+		}
+		div#code h4
+		{
+			margin-top: 0.1em;
+		}
+		div#codeForRaphael
+		{
+			float: left;
+			height: 100%;
+			width: 74%;
+			overflow: auto;
+			border-right: 1px solid #000;
+		}
+		
+		div#codeForCanvas
+		{
+			margin-left: 1%;
+			float: left;
+			height: 100%;
+			width: 24%;
+			overflow: auto;
+		}
+		
+		div#codeForCanvas p
+		{
+			margin: 0;
+		}
+		
+		p.pointHolder
+		{
+			border: 1px solid white;
+		}
+	</style>
+	<script type="text/javascript">
+		var PathGenerator = function ()
+		{
+			/* Collection of the points that were clicked.*/
+			var points = [],
+			$containerElementofSrcPicture,
+			containerElementofSrcPictureID = null,
+			/* the top left of whatever element they want us to use for the source image container*/
+			origin,
+			pointsEditorContainer = null,
+
+			//When called with a point, add it to the displayed list of points
+			//whether or not we're called with a point, update the Raphael and Canvas drawings with all points
+			doUpdates = function (point)
+			{
+				if (point != null)
+				{
+					updatePointDisplay(point);
+				}
+				raphaelDisplay.UpdateDisplay();
+				canvasDisplay.UpdateDisplay();
+				dumpBothPathsToDiv(point);
+			},
+
+			/*expects { x:<x val>, y:<y val> }*/
+			addPoint = function (p)
+			{
+				points.push(p);
+				doUpdates(p);
+			},
+			dumpBothPathsToDiv = function (p)
+			{
+				$("#codeForRaphael").html("<h4>Raphael Path</h4><p>" + raphaelDisplay.GetRaphaelPath() + "</p>");
+				if (points.length == 1)
+				{
+					$("#codeForCanvas").append("<h4>Canvas</h4><p>context.moveTo(" + p.x + "," + p.y + ");</p>");
+				}
+				else
+				{
+					$("#codeForCanvas").append("<p>context.lineTo(" + p.x + "," + p.y + ");</p><p>context.stroke();</p>");
+				}
+			},
+			updatePointDisplay = function (point)
+			{
+				var oldText = pointsEditorContainer.html();
+				var pointIndex = points.length - 1;
+				var newText = "<p class='pointHolder' onClick='PathGenerator.HilitePoint(this)'> <input type='hidden' value='" + pointIndex + "' /> ";
+				newText += "x: <input class='x' type='text' value='" + point.x + "' />";
+				newText += "y: <input class='y' type='text' value='" + point.y + "' /></p>";
+				pointsEditorContainer.html(oldText + newText);
+			},
+
+			raphaelDisplay = function ()
+			{
+				var raphaelPathContainer = null,
+				raphaelPathContainerID = null,
+				/* In SVG, line paths are a list points whose x and y coordinates are the offsets from the previous point
+				in the path. That's what offsetsFromPrevious holds. */
+				offsetsFromPrevious = [],
+				getRaphaelPath = function ()
+				{
+					var ret = "ERROR: PathGenerator wants to be initialized with an element that it can use to get an origin";
+
+					if (origin != null)
+					{
+						ret = "";
+						if (points.length > 0)
+						{
+							fillOffsets();
+
+							if (offsetsFromPrevious.length > 0)
+							{
+								var prevX = points[0].x;
+								var prevY = points[0].y;
+								/* M means MoveTo. l is the start of the line string.
+								So, move to the first point*/
+								ret = "M" + prevX + "," + prevY + "l";
+								/* add a set of x,y coords for each offset from previous */
+								for (var i = 1; i < offsetsFromPrevious.length; i++)
+								{
+									ret += offsetsFromPrevious[i].x + "," + offsetsFromPrevious[i].y + " ";
+								}
+								ret += "z";
+							}
+						}
+					}
+					return ret;
+				},
+				fillOffsets = function ()
+				{
+					if (points.length > 1)
+					{
+						offsetsFromPrevious = [];
+						var prevX = points[0].x;
+						var prevY = points[0].y;
+
+						//offsetsFromPrevious[0] is not used
+						offsetsFromPrevious.push("undefined");
+						for (var i = 1; i < points.length; i++)
+						{
+							offsetsFromPrevious.push({ x: points[i].x - prevX, y: points[i].y - prevY });
+							prevX = points[i].x;
+							prevY = points[i].y;
+						}
+					}
+				},
+				clearDisplay = function ()
+				{
+					$("#" + raphaelPathContainerID + " svg").remove();
+				},
+				reset = function ()
+				{
+					stopRotating();
+					clearDisplay();
+					offsetsFromPrevious = [];
+				},
+				updateDisplay = function ()
+				{
+					clearDisplay();
+					var raph = Raphael($("#" + raphaelPathContainerID)[0], 0, 0, raphaelPathContainer.width(), raphaelPathContainer.height());
+					var myPath = raph.path(getRaphaelPath()).attr({ stroke: "#000" });
+				},
+				centerOfRotation = { x: 0, y: 0 },
+				setClickHander = function ()
+				{
+					raphaelPathContainer.click(function (e)
+					{
+						var localX = e.layerX;
+						if (!localX)
+						{
+							//TODO: do we fall in here on certain browsers? If so probably need to loop up thru parents and get total offset
+							debugger; var totalLeftOffset = $(e.currentTarget).parent().position().left;
+							localX = e.clientX - totalLeftOffset;
+						}
+						var localY = e.layerY;
+						if (!localY)
+						{
+							debugger; var totalTopOffset = $(e.currentTarget).parent().position().top;
+							localY = e.clientY - totalTopOffset;
+						}
+
+						setCenterOfRotation({ x: localX, y: localY });
+						rotateDisplay();
+					});
+				},
+				promptForCenterOfRotation = function ()
+				{
+					$("#RaphaelPathHolder .pgpopup").fadeIn(500);
+					setTimeout(setClickHander, 1000);
+					$("#RaphaelPathHolder .pgpopup").fadeOut(1500);
+				},
+
+				getCenterOfRotation = function ()
+				{
+					return centerOfRotation;
+				},
+				setCenterOfRotation = function (ctrOfRotation)
+				{
+					centerOfRotation = ctrOfRotation;
+				},
+				raphPathIsRotating = false,
+				rotateDisplay = function ()
+				{
+					function DoAnimation()
+					{
+						if (raphPathIsRotating)
+						{
+							$("#" + raphaelPathContainerID + " svg").remove();
+							var raph = Raphael(raphaelPathContainer[0], 0, 0, raphaelPathContainer.width(), raphaelPathContainer.height());
+							raph.clear();
+							var myPath = myPath || raph.path(getRaphaelPath()).attr({ stroke: "#000" });
+
+							var center = PathGenerator.GetCenterOfRaphaelRotation();
+							myPath.animate({ transform: "r360 " + center.x + " " + center.y + " " }, 2000, anim2);
+						}
+					}
+					function anim1()
+					{
+						DoAnimation();
+					}
+					function anim2()
+					{
+						DoAnimation();
+					}
+					raphPathIsRotating = true;
+					anim1();
+					//
+					initializeClickHandlers();
+				},
+				stopRotating = function ()
+				{
+					raphPathIsRotating = false;
+					updateDisplay();
+				},
+				init = function (raphContainerID)
+				{
+					raphaelPathContainerID = raphContainerID;
+					raphaelPathContainer = $("#" + raphaelPathContainerID);
+				};
+
+				return { SetClickHandler: setClickHander,
+					UpdateDisplay: updateDisplay,
+					Reset: reset,
+					Init: init,
+					GetRaphaelPath: getRaphaelPath,
+					GetCenterOfRotation: getCenterOfRotation,
+					SetCenterOfRotation: setCenterOfRotation,
+					PromptForCenterOfRotation: promptForCenterOfRotation,
+					RotateDisplay: rotateDisplay,
+					StopRotating: stopRotating
+				};
+			} (),        // raphaelDisplay, call yourself right now...
+			canvasDisplay = function ()
+			{
+				var canvasPathContainerID = null,
+				$outputCanvas = null,
+				context = null,
+
+				drawPath = function (pointArr)
+				{
+					context.clearRect(0, 0, $outputCanvas.width(), $outputCanvas.height());
+					if (pointArr.length > 0)
+					{
+						context.beginPath();
+						context.moveTo(pointArr[0].x, pointArr[0].y);
+
+						for (var i = 1; i < pointArr.length; i++)
+						{
+							context.lineTo(pointArr[i].x, pointArr[i].y);
+							context.stroke();
+						}
+						context.closePath();
+						context.stroke();
+					}
+				},
+				updateDisplay = function ()
+				{
+					drawPath(points);
+				},
+				centerOfRotation,
+				//all of our points will need to be translated to have the center of rotation as the origin
+				translatedPoints,
+				fillTranslatedPoints = function ()
+				{
+					if (points.length > 2)
+					{
+						translatedPoints = [];
+						for (var i = 0; i < points.length; i++)
+						{
+							translatedPoints.push({ x: points[i].x - centerOfRotation.x, y: points[i].y - centerOfRotation.y });
+						}
+					}
+				},
+				rotationTimer,
+				promptForCenterOfCanvasRotation = function ()
+				{
+					$(".col4 .pgpopup").fadeIn(500);
+					$outputCanvas.click(function (e)
+					{
+						var localX = e.layerX;
+						var localY = e.layerY;
+						centerOfRotation = { x: localX, y: localY };
+						fillTranslatedPoints();
+						var currentRotation = 0;
+						function rotateCanvasOneDegree()
+						{
+							function radiansFromDegrees(degrees)
+							{
+								return degrees * Math.PI / 180;
+							}
+
+							context.setTransform(1, 0, 0, 1, 0, 0);
+							context.clearRect(0, 0, $outputCanvas.width(), $outputCanvas.height());
+							context.translate(centerOfRotation.x, centerOfRotation.y);
+							context.rotate(radiansFromDegrees(currentRotation++));
+							drawPath(translatedPoints);
+						}
+
+						rotationTimer = setInterval(rotateCanvasOneDegree, 2000 / 360);
+					});
+					$(".col4 .pgpopup").fadeOut(1200);
+				},
+				stopRotating = function ()
+				{
+					clearInterval(rotationTimer);
+					//debugger;
+					context.setTransform(1, 0, 0, 1, 0, 0);
+					drawPath(points);
+				},
+				clearDisplay = function ()
+				{
+					stopRotating();
+					context.clearRect(0, 0, $outputCanvas.width(), $outputCanvas.height());
+					context.strokeStyle = "#000";
+					raphPathIsRotating = false;
+				},
+				init = function (canvasOutputHolder)
+				{
+					canvasPathContainerID = canvasOutputHolder;
+					$outputCanvas = $("#" + canvasPathContainerID);
+					context = $outputCanvas[0].getContext("2d");
+				};
+
+				return { UpdateDisplay: updateDisplay,
+					ClearDisplay: clearDisplay,
+					PromptForCenterOfCanvasRotation: promptForCenterOfCanvasRotation,
+					StopRotating: stopRotating,
+					Init: init
+				};
+			} (), // canvasDisplay, call yourself right now...
+			hilitePoint = function (e)
+			{
+				$(".pointHolder").css({ "background-color": "transparent",
+					"padding-top": "0", "padding-bottom": "0"
+				});
+				var $pTagThisPoint = $(e);
+				var pointArrayIdx = $pTagThisPoint.find("input[type='hidden']")[0].value;
+				showDot({ x: points[pointArrayIdx].x, y: points[pointArrayIdx].y });
+
+
+				$pTagThisPoint.css({ "background-color": "#6c0", "padding-top": "0.2em", "padding-bottom": "0.2em" })
+				.find('input[type="text"]').bind('input', function (e)
+				{
+					var pointArrayIdx = $(e.currentTarget.parentElement).find("input[type='hidden']")[0].value;
+					var xInput = $(e.currentTarget.parentElement).find("input[type='text']")[0];
+					var yInput = $(e.currentTarget.parentElement).find("input[type='text']")[1];
+					var pointToUpdate = points[parseInt(pointArrayIdx)];
+					points[parseInt(pointArrayIdx)] = { x: parseInt(xInput.value),
+						y: parseInt(yInput.value)
+					};
+
+					canvasDisplay.StopRotating();
+					raphaelDisplay.StopRotating();
+					//doUpdates();
+				});
+			},
+			reset = function ()
+			{
+				hideDot();
+				points = offsetsFromPrevious = [];
+				pointsEditorContainer.html("");
+				$("#codeForRaphael").text("");
+				$("#codeForCanvas").text("");
+				canvasDisplay.ClearDisplay();
+				raphaelDisplay.Reset();
+				return false;
+			},
+			initializeClickHandlers = function ()
+			{
+				$containerElementofSrcPicture.unbind("click");
+				$containerElementofSrcPicture.click(function (e)
+				{
+					var localX = e.layerX || e.clientX - origin.left;
+					var localY = e.layerY || e.clientY - origin.top;
+					PathGenerator.AddPoint({ x: localX, y: localY });
+				});
+			},
+			$dotCanvas, dotDiv,
+			addEditDotToSrcImage = function ()
+			{
+				$containerElementofSrcPicture.append("<div class='pgDotDv'><canvas id='pgDotCv' width='11' height='11' ></canvas></div>");
+
+				dotDiv = $containerElementofSrcPicture.find(".pgDotDv")
+				.css({ border: 'none', position: "absolute", top: 0, left: 0, width: '11px', height: '11px' });
+				$dotCanvas = dotDiv.find("#pgDotCv");
+				var context = $dotCanvas[0].getContext("2d");
+				context.fillStyle = '#0F0';
+				context.arc(5, 5, 5, 0, Math.PI * 2);
+				context.fill();
+				$dotCanvas.hide();
+
+			},
+			blinkingDotTimer,
+			showDot = function (point)
+			{
+				if ($dotCanvas.is(":visible"))
+				{
+					$dotCanvas.fadeOut(200);
+				}
+				var newLeft = point.x + "px";
+				var newTop = point.y + "px";
+
+				dotDiv.css({ top: newTop, left: newLeft });
+				function blinkDot()
+				{
+					$dotCanvas.fadeIn(600);
+					$dotCanvas.fadeOut(600);
+				}
+				blinkingDotTimer = setInterval(blinkDot, 1300);
+				pointsEditorContainer.mouseleave(hideDot);
+			},
+			hideDot = function ()
+			{
+				clearInterval(blinkingDotTimer);
+				$dotCanvas.hide();
+			},
+			loadSourceImage = function ()
+			{
+				var newUrl = prompt("New Url", "http://nofranchise.org/img/gear1.jpg");
+				$containerElementofSrcPicture.find("img").attr("src", newUrl).load(function ()
+				{
+					shrinkImageToFit();
+				});
+			},
+			shrinkImageToFit = function ()
+			{
+				//If they want to use an image that's smaller than the container, I don't resize.  If the image is bigger than
+				//the container, I do. 
+				var newImg = $containerElementofSrcPicture.find("img");
+				if (newImg.width() > $containerElementofSrcPicture.width())
+				{
+					newImg.css({ width: $containerElementofSrcPicture.width() + "px" });
+				}
+			},
+			init = function (containerEl, editorContainerID, raphaelContainerID, canvasPathContainerID)
+			{
+				pointsEditorContainer = $("#" + editorContainerID);
+				containerElementofSrcPictureID = containerEl;
+				$containerElementofSrcPicture = $("#" + containerEl);
+				shrinkImageToFit();
+				$(window).resize(shrinkImageToFit);
+
+				origin = $containerElementofSrcPicture.position();
+
+				raphaelDisplay.Init(raphaelContainerID);
+				canvasDisplay.Init(canvasPathContainerID);
+				initializeClickHandlers();
+				addEditDotToSrcImage();
+			};
+
+			return { Init: init,
+				LoadSourceImage: loadSourceImage,
+				AddPoint: addPoint,
+				GetRaphaelPath: raphaelDisplay.GetRaphaelPath,
+				DumpBothPathsToDiv: dumpBothPathsToDiv,
+				RotateRaphaelDisplay: raphaelDisplay.RotateDisplay,
+				GetCenterOfRaphaelRotation: raphaelDisplay.GetCenterOfRotation,
+				SetCenterOfRaphaelRotation: raphaelDisplay.SetCenterOfRotation,
+				PromptForCenterOfRaphaelRotation: raphaelDisplay.PromptForCenterOfRotation,
+
+				PromptForCenterOfCanvasRotation: canvasDisplay.PromptForCenterOfCanvasRotation,
+				HilitePoint: hilitePoint,
+				Reset: reset
+			};
+
+		} ();
+		$(function ()
+		{
+			PathGenerator.Init("srcImageHolder", "editorHolder", "RaphaelPathHolder", "CanvasPathHolder");
+		});
+
+		
+	</script>
+</head>
+<body>
+	<div class="explanation">
+		<h1>
+			Path Tracer</h1>
+		I wrote this page to make it easier to generate a <a href="http://raphaeljs.com">Raphael</a> path or the collection of points
+		you would use to draw that path on an HTML5 canvas - by tracing points along an image. To
+		use it, click "img src" below and paste the url of the image you want to trace into
+		the prompt. Then you can start clicking on the image to generate your points and
+		copy the code from the output below.  As you click, both the SVG path and the canvas get updated with your new points.  
+		My plan is to animate film going through a film projector, so I wanted to make a lot of different sizes and shapes of rolls
+		and spools for the film to thread through.  So, there are "rotate" links in both the SVG and canvas containers.
+		I've read there are tools out there, like Adobe Illustrator
+		&copy; that do this much better, but I thought it would be cool to make a tool that
+		would do if for free, so that I could experiment with Raphael and Canvas.
+	</div>
+	<div class="tool">
+		<div class="col1">
+			<h2>
+				trace here</h2>
+			<div id="srcImageHolder">
+				<img src="http://nofranchise.org/html5/images/gear1.png" alt="gears" />
+			</div>
+			<div class="SmallControlToSW">
+				<a href="#" onclick="PathGenerator.LoadSourceImage()">imc src</a>
+			</div>
+			<div class="SmallControlToSE">
+				<a href="#" onclick="PathGenerator.Reset()">reset</a>
+			</div>
+		</div>
+		<div class="col2">
+			<h2>
+				points</h2>
+			<div id="editorHolder">
+				<!--Holds the inputs with the x, y points -->
+			</div>
+		</div>
+		<div class="col3">
+			<h2>
+				Raphael path</h2>
+			<div id="RaphaelPathHolder">
+				<div class="pgpopup">
+					<div>
+						Choose the center of rotation</div>
+				</div>
+			</div>
+			<div class="SmallControlToSE">
+				<img src="images/rotate16.png" alt="rotate" onclick="PathGenerator.PromptForCenterOfRaphaelRotation()" />
+			</div>
+		</div>
+		<div class="col4">
+			<h2>
+				canvas</h2>
+			<canvas id="CanvasPathHolder" width="380" height="360"></canvas>
+			<div class="pgpopup">
+				<div>
+					Choose the center of rotation</div>
+			</div>
+			<div class="SmallControlToSE">
+				<img src="images/rotate16.png" alt="rotate" onclick="PathGenerator.PromptForCenterOfCanvasRotation()" />
+			</div>
+		</div>
+		<div id="code">
+			<div id="codeForRaphael" ></div>
+			<div id="codeForCanvas" />
+		</div>
+	</div>
+</body>
+</html>
