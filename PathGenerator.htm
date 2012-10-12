@@ -3,9 +3,8 @@
 <head>
 	<meta charset="UTF-8">
 	<script src="../scripts/raphael-min.js"></script>
-	<script src="//ajax.googleapis.com/ajax/libs/jquery/3.7.2/jquery.min.js"></script>
-<script>	window.jQuery || document.write('<script src="../scripts/jquery-1.8.2.min.js"><\/script>')</script>
-	
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+	<script>		window.jQuery || document.write('<script src="../scripts/jquery-1.8.2.min.js"><\/script>')</script>
 	<title>Path Generator</title>
 	<style type="text/css">
 		body
@@ -60,19 +59,12 @@
 		}
 		
 		
-		div.col1 div, div.col2 div, div.col3 div
+		div.col1 div, div.col2 div, div.col3 div, div.col4 div 
 		{
 			border: 1px solid #000;
 			height: 90%;
 			position: absolute;
 			width: 100%;
-			top: 8%;
-		}
-		
-		div.col4 canvas
-		{
-			border: 1px solid #000;
-			position: absolute;
 			top: 8%;
 		}
 		
@@ -93,8 +85,7 @@
 			margin: 0;
 			border: none;
 		}
-		
-		
+				
 		.col1 .SmallControlToSE, .col1 .SmallControlToSW, .col3 .SmallControlToSE, .col4 .SmallControlToSE
 		{
 			border: none;
@@ -205,9 +196,6 @@
 		}
 	</style>
 	<script type="text/javascript">
-/*
-TODO: When you click the rotate button a second time, stop rotation.
-*/
 		var PathGenerator = function ()
 		{
 			/* Collection of the points that were clicked.*/
@@ -258,7 +246,12 @@ TODO: When you click the rotate button a second time, stop rotation.
 				newText += "y: <input class='y' type='text' value='" + point.y + "' /></p>";
 				pointsEditorContainer.html(oldText + newText);
 			},
-
+			addDotToContainer = function ($container)
+			{
+				$container.append("<div class='pgDotDv'><canvas class='pgDotCv' width='32' height='32' ></canvas></div>")
+				.find(".pgDotDv")
+				.css({ border: 'none', opacity: "0", position: "absolute", top: 35, left: 110, width: '11px', height: '11px' });
+			},
 			raphaelDisplay = function ()
 			{
 				var raphaelPathContainer = null,
@@ -269,14 +262,12 @@ TODO: When you click the rotate button a second time, stop rotation.
 				getRaphaelPath = function ()
 				{
 					var ret = "ERROR: PathGenerator wants to be initialized with an element that it can use to get an origin";
-
 					if (origin != null)
 					{
 						ret = "";
 						if (points.length > 0)
 						{
 							fillOffsets();
-
 							if (offsetsFromPrevious.length > 0)
 							{
 								var prevX = points[0].x;
@@ -330,21 +321,27 @@ TODO: When you click the rotate button a second time, stop rotation.
 					var myPath = raph.path(getRaphaelPath()).attr({ stroke: "#000" });
 				},
 				centerOfRotation = { x: 0, y: 0 },
-				setClickHander = function ()
+				setClickHander = function ()//this gets called when you click the rotate icon
 				{
 					raphaelPathContainer.click(function (e)
 					{
 						var localX = getLocalX(e);
 						var localY = getLocalY(e);
 						setCenterOfRotation({ x: localX, y: localY });
-						rotateDisplay();
+						startRotating();
+						raphaelPathContainer.unbind('click');
+						$(".col3 .SmallControlToSE img").attr("src", "images/stop.png")
+						.unbind("click")
+						.click(function () { stopRotating(); });
 					});
 				},
 				promptForCenterOfRotation = function ()
 				{
-					$("#RaphaelPathHolder .pgpopup").fadeIn(500);
-					setTimeout(setClickHander, 1000);
-					$("#RaphaelPathHolder .pgpopup").fadeOut(1500);
+					setClickHander();
+					if (centerOfRotation.x == 0 && centerOfRotation.y == 0)
+					{
+						$("#RaphaelPathHolder .pgpopup").fadeIn(500).fadeOut(1500);
+					}
 				},
 
 				getCenterOfRotation = function ()
@@ -356,7 +353,7 @@ TODO: When you click the rotate button a second time, stop rotation.
 					centerOfRotation = ctrOfRotation;
 				},
 				raphPathIsRotating = false,
-				rotateDisplay = function ()
+				startRotating = function ()
 				{
 					function DoAnimation()
 					{
@@ -368,7 +365,7 @@ TODO: When you click the rotate button a second time, stop rotation.
 							var myPath = myPath || raph.path(getRaphaelPath()).attr({ stroke: "#000" });
 
 							var center = PathGenerator.GetCenterOfRaphaelRotation();
-							myPath.animate({ transform: "r360 " + center.x + " " + center.y + " " }, 2000, anim2);
+							myPath.animate({ transform: "r360 " + center.x + " " + center.y + " " }, 3000, anim2);
 						}
 					}
 					function anim1()
@@ -380,19 +377,51 @@ TODO: When you click the rotate button a second time, stop rotation.
 						DoAnimation();
 					}
 					raphPathIsRotating = true;
-					anim1();
-					//
-					initializeClickHandlers();
+					if (!(centerOfRotation.x == 0 && centerOfRotation.y == 0))
+					{
+						anim1();
+					}
 				},
 				stopRotating = function ()
 				{
 					raphPathIsRotating = false;
+					$(".col3 .SmallControlToSE img").attr("src", "images/rotate16.png");
+					centerOfRotation = { x: 0, y: 0 };
 					updateDisplay();
+				},
+				$dotCanvas, $dotDiv, showBlinkingDot = false,
+				showDot = function (point)
+				{
+					positionDot(point, $dotDiv, $dotCanvas);
+					showBlinkingDot = true;
+					blinkOn();
+					function blinkOn()
+					{
+						if (showBlinkingDot)
+						{
+							$dotDiv.animate({ opacity: '1' }, 500, blinkOff);
+						}
+					}
+					function blinkOff()
+					{
+						if (showBlinkingDot)
+						{
+							$dotDiv.animate({ opacity: '0' }, 500, blinkOn);
+						}
+					}
+				},
+				hideDot = function ()
+				{
+					showBlinkingDot = false;
+					$dotDiv.animate({ opacity: '0' }, 200);
 				},
 				init = function (raphContainerID)
 				{
 					raphaelPathContainerID = raphContainerID;
 					raphaelPathContainer = $("#" + raphaelPathContainerID);
+					var divAndDot = addEditDotToContainer(raphaelPathContainer);
+					$dotDiv = divAndDot[0];
+					$dotCanvas = divAndDot[1];
 				};
 
 				return { SetClickHandler: setClickHander,
@@ -403,14 +432,17 @@ TODO: When you click the rotate button a second time, stop rotation.
 					GetCenterOfRotation: getCenterOfRotation,
 					SetCenterOfRotation: setCenterOfRotation,
 					PromptForCenterOfRotation: promptForCenterOfRotation,
-					RotateDisplay: rotateDisplay,
-					StopRotating: stopRotating
+					//RotateDisplay: rotateDisplay,
+					StopRotating: stopRotating,
+					ShowDot: showDot,
+					HideDot: hideDot
 				};
 			} (),        // raphaelDisplay, call yourself right now...
 			canvasDisplay = function ()
 			{
-				var canvasPathContainerID = null,
+				var canvasID = null,
 				$outputCanvas = null,
+				$divContainingOutputCanvas = null,
 				context = null,
 
 				drawPath = function (pointArr)
@@ -420,7 +452,6 @@ TODO: When you click the rotate button a second time, stop rotation.
 					{
 						context.beginPath();
 						context.moveTo(pointArr[0].x, pointArr[0].y);
-
 						for (var i = 1; i < pointArr.length; i++)
 						{
 							context.lineTo(pointArr[i].x, pointArr[i].y);
@@ -434,7 +465,7 @@ TODO: When you click the rotate button a second time, stop rotation.
 				{
 					drawPath(points);
 				},
-				centerOfRotation,
+				centerOfRotation = { x: 0, y: 0 },
 				//all of our points will need to be translated to have the center of rotation as the origin
 				translatedPoints,
 				fillTranslatedPoints = function ()
@@ -448,72 +479,120 @@ TODO: When you click the rotate button a second time, stop rotation.
 						}
 					}
 				},
-				rotationTimer,
+				rotationTimer, isRotating = false,
 				promptForCenterOfCanvasRotation = function ()
 				{
-					$(".col4 .pgpopup").fadeIn(500);
 					$outputCanvas.click(function (e)
 					{
 						var localX = getLocalX(e);
 						var localY = getLocalY(e);
 						centerOfRotation = { x: localX, y: localY };
+						startRotating();
+					});
+					if (centerOfRotation.x == 0 && centerOfRotation.y == 0)
+					{
+						$(".col4 .pgpopup").fadeIn(500).fadeOut(1000);
+					}
+				},
+				startRotating = function ()
+				{
+					isRotating = true;
+					if (centerOfRotation.x != 0 && centerOfRotation.y != 0)
+					{
 						fillTranslatedPoints();
 						var currentRotation = 0;
+
 						function rotateCanvasOneDegree()
 						{
-							function radiansFromDegrees(degrees)
+							function radiansFromDegrees(degrees) { return degrees * Math.PI / 180; }
+							if (isRotating && centerOfRotation.x != 0 && centerOfRotation.y != 0)
 							{
-								return degrees * Math.PI / 180;
+								context.setTransform(1, 0, 0, 1, 0, 0);
+								context.clearRect(0, 0, $outputCanvas.width(), $outputCanvas.height());
+								context.translate(centerOfRotation.x, centerOfRotation.y);
+								context.rotate(radiansFromDegrees(currentRotation+=2));
+								drawPath(translatedPoints);
 							}
-
-							context.setTransform(1, 0, 0, 1, 0, 0);
-							context.clearRect(0, 0, $outputCanvas.width(), $outputCanvas.height());
-							context.translate(centerOfRotation.x, centerOfRotation.y);
-							context.rotate(radiansFromDegrees(currentRotation++));
-							drawPath(translatedPoints);
 						}
 
 						rotationTimer = setInterval(rotateCanvasOneDegree, 2000 / 360);
-					});
-					$(".col4 .pgpopup").fadeOut(1200);
+
+						$(".col4 .SmallControlToSE img").attr("src", "images/stop.png")
+					     .unbind("click").click(stopRotating);
+						hideDot();
+					}
 				},
 				stopRotating = function ()
 				{
-					clearInterval(rotationTimer);
-					//debugger;
+					isRotating = false;
 					context.setTransform(1, 0, 0, 1, 0, 0);
 					drawPath(points);
+					$(".col4 .SmallControlToSE img").attr("src", "images/rotate16.png")
+					  .unbind("click");//.click(promptForCenterOfCanvasRotation);
+					centerOfRotation = { x: 0, y: 0 };
+					hideDot();
 				},
 				clearDisplay = function ()
 				{
 					stopRotating();
 					context.clearRect(0, 0, $outputCanvas.width(), $outputCanvas.height());
 					context.strokeStyle = "#000";
-					raphPathIsRotating = false;
+					hideDot();
+				},
+				$dotCanvas, $dotDiv, showBlinkingDot = false,
+				showDot = function (point)
+				{
+					positionDot(point, $dotDiv, $dotCanvas);
+					showBlinkingDot = true;
+					blinkOn();
+					function blinkOn()
+					{
+						if (showBlinkingDot)
+						{
+							$dotDiv.animate({ opacity: '1' }, 500, blinkOff);
+						}
+					}
+					function blinkOff()
+					{
+						if (showBlinkingDot)
+						{
+							$dotDiv.animate({ opacity: '0' }, 500, blinkOn);
+						}
+					}
+				},
+				hideDot = function ()
+				{
+					showBlinkingDot = false;
+					$dotDiv.animate({ opacity: '0' }, 200);
 				},
 				init = function (canvasOutputHolder)
 				{
-					canvasPathContainerID = canvasOutputHolder;
-					$outputCanvas = $("#" + canvasPathContainerID);
+					//canvasOutputHolder is the ID of the div that contains the outputCanvas
+					canvasID = canvasOutputHolder;
+					$outputCanvas = $("#" + canvasID);
+					$divContainingOutputCanvas = $outputCanvas.parent();
 					context = $outputCanvas[0].getContext("2d");
+					var divAndDot = addEditDotToContainer($divContainingOutputCanvas);
+					$dotDiv = divAndDot[0];
+					$dotCanvas = divAndDot[1];
+					$dotCanvas.css({ border: "none" });
 				};
 
 				return { UpdateDisplay: updateDisplay,
 					ClearDisplay: clearDisplay,
 					PromptForCenterOfCanvasRotation: promptForCenterOfCanvasRotation,
 					StopRotating: stopRotating,
+					ShowDot: showDot,
+					HideDot: hideDot,
 					Init: init
 				};
 			} (), // canvasDisplay, call yourself right now...
 			hilitePoint = function (e)
 			{
-				$(".pointHolder").css({ "background-color": "transparent",
-					"padding-top": "0", "padding-bottom": "0"
-				});
+				makePointInputsLookNormal();
 				var $pTagThisPoint = $(e);
 				var pointArrayIdx = $pTagThisPoint.find("input[type='hidden']")[0].value;
-				showDot({ x: points[pointArrayIdx].x, y: points[pointArrayIdx].y });
-
+				showDots({ x: points[pointArrayIdx].x, y: points[pointArrayIdx].y });
 
 				$pTagThisPoint.css({ "background-color": "#6c0", "padding-top": "0.2em", "padding-bottom": "0.2em" })
 				.find('input[type="text"]').bind('input', function (e)
@@ -522,13 +601,15 @@ TODO: When you click the rotate button a second time, stop rotation.
 					var xInput = $(e.currentTarget.parentElement).find("input[type='text']")[0];
 					var yInput = $(e.currentTarget.parentElement).find("input[type='text']")[1];
 					var pointToUpdate = points[parseInt(pointArrayIdx)];
-					points[parseInt(pointArrayIdx)] = { x: parseInt(xInput.value),
-						y: parseInt(yInput.value)
-					};
-
+					points[parseInt(pointArrayIdx)] = { x: parseInt(xInput.value), y: parseInt(yInput.value) };
 					canvasDisplay.StopRotating();
 					raphaelDisplay.StopRotating();
-					//doUpdates();
+				});
+			},
+			makePointInputsLookNormal = function ()
+			{
+				$(".pointHolder").css({ "background-color": "transparent",
+					"padding-top": "0", "padding-bottom": "0"
 				});
 			},
 			reset = function ()
@@ -547,59 +628,76 @@ TODO: When you click the rotate button a second time, stop rotation.
 				$containerElementofSrcPicture.unbind("click");
 				$containerElementofSrcPicture.click(function (e)
 				{
-					//debugger;
-					var localX = getLocalX(e);
-					var localY = getLocalY(e);
+					var localX = Math.floor(getLocalX(e));
+					var localY = Math.floor(getLocalY(e));
 					PathGenerator.AddPoint({ x: localX, y: localY });
 				});
 			},
 			getLocalX = function (e)
 			{
 				return e.layerX || e.clientX - $(e.currentTarget).offset().left;
-
 			},
 			getLocalY = function (e)
 			{
 				return e.layerY || e.clientY - $(e.currentTarget).offset().top;
 			},
-			$dotCanvas, dotDiv,
-			addEditDotToSrcImage = function ()
+			positionDot = function (point, $dotHolder, $dotCanvas)
 			{
-				$containerElementofSrcPicture.append("<div class='pgDotDv'><canvas id='pgDotCv' width='11' height='11' ></canvas></div>");
-
-				dotDiv = $containerElementofSrcPicture.find(".pgDotDv")
-				.css({ border: 'none', position: "absolute", top: 0, left: 0, width: '11px', height: '11px' });
-				$dotCanvas = dotDiv.find("#pgDotCv");
-				var context = $dotCanvas[0].getContext("2d");
-				context.fillStyle = '#0F0';
-				context.arc(5, 5, 5, 0, Math.PI * 2);
-				context.fill();
-				$dotCanvas.hide();
-
-			},
-			blinkingDotTimer,
-			showDot = function (point)
-			{
-				if ($dotCanvas.is(":visible"))
-				{
-					$dotCanvas.fadeOut(200);
-				}
 				var newLeft = point.x + "px";
 				var newTop = point.y + "px";
+				$dotHolder.css({ top: newTop, left: newLeft });
+			},
+			$dotCanvas, $dotDiv,
+			addEditDotToContainer = function ($containerElement)
+			{
+				addDotToContainer($containerElement);
+				var $dotDiv = $containerElement.find(".pgDotDv");
+				var $dotCanvas = $dotDiv.find(".pgDotCv");
+				var context = $dotCanvas[0].getContext("2d");
+				context.fillStyle = '#f00';
+				context.strokeStyle = '#F00';
+				context.arc(25, 25, 5, 0, Math.PI * 2);
+				context.fill();
+				context.moveTo(0, 0);
+				context.lineTo(25, 25);
+				context.stroke();
 
-				dotDiv.css({ top: newTop, left: newLeft });
-				function blinkDot()
+				return [$dotDiv, $dotCanvas];
+
+			},
+			showBlinkingDot = false,
+			showDots = function (point)
+			{
+				positionDot(point, $dotDiv, $dotCanvas);
+				showBlinkingDot = true;
+				blinkOn();
+				function blinkOn()
 				{
-					$dotCanvas.fadeIn(600);
-					$dotCanvas.fadeOut(600);
+					if (showBlinkingDot)
+					{
+						$dotDiv.animate({ opacity: '1' }, 500, blinkOff);
+					}
 				}
-				blinkingDotTimer = setInterval(blinkDot, 1300);
-				pointsEditorContainer.mouseleave(hideDot);
+				function blinkOff()
+				{
+					if (showBlinkingDot)
+					{
+						$dotDiv.animate({ opacity: '0' }, 500, blinkOn);
+					}
+				}
+
+				raphaelDisplay.ShowDot(point);
+				canvasDisplay.ShowDot(point);
+				pointsEditorContainer.mouseleave(function () { hideDot(); $("#codeForCanvas").append("<span>mouseleave</span>"); });
+				pointsEditorContainer.mouseout(function () { hideDot(); $("#codeForCanvas").append("<span>mouseout</span>"); });
 			},
 			hideDot = function ()
 			{
-				clearInterval(blinkingDotTimer);
-				$dotCanvas.hide();
+				showBlinkingDot = false;
+				$dotDiv.animate({ opacity: '0' }, 200);
+				raphaelDisplay.HideDot();
+				canvasDisplay.HideDot();
+				makePointInputsLookNormal();
 			},
 			loadSourceImage = function ()
 			{
@@ -619,7 +717,7 @@ TODO: When you click the rotate button a second time, stop rotation.
 					newImg.css({ width: $containerElementofSrcPicture.width() + "px" });
 				}
 			},
-			init = function (containerEl, editorContainerID, raphaelContainerID, canvasPathContainerID)
+			init = function (containerEl, editorContainerID, raphaelContainerID, canvasID)
 			{
 				pointsEditorContainer = $("#" + editorContainerID);
 				containerElementofSrcPictureID = containerEl;
@@ -630,9 +728,11 @@ TODO: When you click the rotate button a second time, stop rotation.
 				origin = $containerElementofSrcPicture.position();
 
 				raphaelDisplay.Init(raphaelContainerID);
-				canvasDisplay.Init(canvasPathContainerID);
+				canvasDisplay.Init(canvasID);
 				initializeClickHandlers();
-				addEditDotToSrcImage();
+				var divAndCanvas = addEditDotToContainer($containerElementofSrcPicture);
+				$dotDiv = divAndCanvas[0];
+				$dotCanvas = divAndCanvas[1];
 			};
 
 			return { Init: init,
@@ -640,7 +740,6 @@ TODO: When you click the rotate button a second time, stop rotation.
 				AddPoint: addPoint,
 				GetRaphaelPath: raphaelDisplay.GetRaphaelPath,
 				DumpBothPathsToDiv: dumpBothPathsToDiv,
-				RotateRaphaelDisplay: raphaelDisplay.RotateDisplay,
 				GetCenterOfRaphaelRotation: raphaelDisplay.GetCenterOfRotation,
 				SetCenterOfRaphaelRotation: raphaelDisplay.SetCenterOfRotation,
 				PromptForCenterOfRaphaelRotation: raphaelDisplay.PromptForCenterOfRotation,
@@ -653,7 +752,7 @@ TODO: When you click the rotate button a second time, stop rotation.
 		} ();
 		$(function ()
 		{
-			PathGenerator.Init("srcImageHolder", "editorHolder", "RaphaelPathHolder", "CanvasPathHolder");
+			PathGenerator.Init("srcImageHolder", "editorHolder", "RaphaelPathHolder", "outputCanvas");
 		});
 
 		
@@ -663,23 +762,25 @@ TODO: When you click the rotate button a second time, stop rotation.
 	<div class="explanation">
 		<h1>
 			Path Tracer</h1>
-		I wrote this page to make it easier to generate a <a href="http://raphaeljs.com">Raphael</a> path or the collection of points
-		you would use to draw that path on an HTML5 canvas - by tracing points along an image. To
-		use it, click "img src" below and paste the url of the image you want to trace into
-		the prompt. Then you can start clicking on the image to generate your points and
-		copy the code from the output below.  As you click, both the SVG path and the canvas get updated with your new points.  
-		My plan is to animate film going through a film projector, so I wanted to make a lot of different sizes and shapes of rolls
-		and spools for the film to thread through.  So, there are "rotate" links in both the SVG and canvas containers.
-		I've read there are tools out there, like Adobe Illustrator
-		&copy; that do this much better, but I thought it would be cool to make a tool that
-		would do if for free, so that I could experiment with Raphael and Canvas.
+		I wrote this page to make it easier to generate a <a href="http://raphaeljs.com">Raphael</a>
+		path or the collection of points you would use to draw that path on an HTML5 canvas
+		- by tracing points along an image. To use it, click "img src" below and paste the
+		url of the image you want to trace into the prompt. Then you can start clicking
+		on the image to generate your points and copy the code from the output below. As
+		you click, both the SVG path and the canvas get updated with your new points. My
+		plan is to animate film going through a film projector, so I wanted to make a lot
+		of different sizes and shapes of rolls and spools for the film to thread through.
+		So, there are "rotate" links in both the SVG and canvas containers. I've read there
+		are tools out there, like Adobe Illustrator &copy; that do this much better, but
+		I thought it would be cool to make a tool that would do if for free, so that I could
+		experiment with Raphael and Canvas.
 	</div>
 	<div class="tool">
 		<div class="col1">
 			<h2>
 				trace here</h2>
 			<div id="srcImageHolder">
-				<img src="http://nofranchise.org/html5/images/gear1.png" alt="gears" />
+				<img src="../images/gears_1.png" alt="gears" />
 			</div>
 			<div class="SmallControlToSW">
 				<a href="#" onclick="PathGenerator.LoadSourceImage()">imc src</a>
@@ -705,23 +806,26 @@ TODO: When you click the rotate button a second time, stop rotation.
 				</div>
 			</div>
 			<div class="SmallControlToSE">
-				<img src="images/rotate16.png" alt="rotate" onclick="PathGenerator.PromptForCenterOfRaphaelRotation()" />
+				<img src="images/rotate16.png" alt="rotate" onclick="PathGenerator.PromptForCenterOfRaphaelRotation()" class="rotateIcon" />
 			</div>
 		</div>
 		<div class="col4">
 			<h2>
 				canvas</h2>
-			<canvas id="CanvasPathHolder" width="380" height="360"></canvas>
+			<div id="CanvasPathHolder">
+				<canvas id="outputCanvas" width="380" height="360"></canvas>
+			</div>
 			<div class="pgpopup">
 				<div>
 					Choose the center of rotation</div>
 			</div>
 			<div class="SmallControlToSE">
-				<img src="images/rotate16.png" alt="rotate" onclick="PathGenerator.PromptForCenterOfCanvasRotation()" />
+				<img src="images/rotate16.png" alt="rotate" onclick="PathGenerator.PromptForCenterOfCanvasRotation()" class="rotateIcon" />
 			</div>
 		</div>
 		<div id="code">
-			<div id="codeForRaphael" ></div>
+			<div id="codeForRaphael">
+			</div>
 			<div id="codeForCanvas" />
 		</div>
 	</div>
