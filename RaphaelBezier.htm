@@ -1,0 +1,161 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+
+	<meta charset="UTF-8">
+	<script src="../jquery-1.4.1.js"></script>
+	<script src="raphael.js" ></script>
+	<script >
+		var BezierDraftsman = function ()
+		{
+			var raph = null,
+			createBezier = function (xa, ya, xb, yb, xc, yc, xd, yd)
+			{
+				//				var path_parts = ["M" + xa, ya, "C" + xb, yb, xc, yc, xd, yd];
+				//				var path_string = path_parts.join(" ");
+				//				raph.path(path_string);
+
+			},
+			init = function (containerID)
+			{
+				var $container = $("." + containerID);
+
+				raph = Raphael($container, $container.width(), $container.height());
+				raph.setViewBox($container.width(), $container.height(), true);
+				raph.path("M 5 35 c 50 90 -50 100 5 200");
+			};
+
+			return { CreateBezier: createBezier,
+				Init: init
+			};
+		} ();
+
+		$(function ()
+		{
+			debugger;
+			BezierDraftsman.Init("pathHolder");
+
+			$(".foo").keyup(function (event)
+			{
+				alert("hey");
+
+			});
+		});
+	
+	</script>
+	<title>Bezier Curves with Raphael</title>
+	<style type="text/css">
+		body
+		{
+			margin: 0;
+			padding: 0;
+			font-family: Arial;
+		}
+		.reqdFields
+		{
+			background-color: #ede;
+			position:absolute;
+			left:0;
+			top:0;
+			width: 140px;
+		}
+		
+		.editor-label
+		{
+			float: left;
+			width: 70%;
+		}
+		
+		.editor-field
+		{
+			float: left;
+			width: 30%;
+		}
+		
+		.editor-field input
+		{
+			width: 3em;
+		}
+		
+		.col2
+		{
+			position:absolute;
+			left:40%;
+			top:0;
+			width: 50%;
+			background-color: #dbe;
+			height: 400px;
+			
+		}
+		
+		.pathHolder
+		{
+			position:absolute;
+			width: 100%;
+			height: 100%;
+		}
+		
+		
+	</style>
+</head>
+<body>
+
+	<div class="reqdFields">
+		<div class="editor-label">
+			<label for="UserName">StartX</label>
+		</div>
+		<div class="editor-field">
+			<input type="text" class="foo" value="5" id="StartX" />    
+		</div>
+		<div class="editor-label">
+			<label for="UserName">StartY</label>
+		</div>
+		<div class="editor-field">
+			<input type="text" value="35" id="StartY" />
+		</div>
+		<div class="editor-label">
+			<label for="UserName">EndX</label> 
+		</div>
+		<div class="editor-field">
+			<input type="text" value="50" id="EndX" />
+		</div>
+		<div class="editor-label">
+			<label for="UserName">EndY</label>
+		</div>
+		<div class="editor-field">
+			<input type="text" value="90" id="EndY" />
+		</div>
+		<div class="editor-label">
+			<label for="UserName">Ctrl1 X</label>
+		</div>
+		<div class="editor-field">
+			<input type="text" value="-50" id="Ctrl1X" />
+		</div>
+		<div class="editor-label">
+			<label for="UserName">Ctrl1 Y</label>
+		</div>
+		<div class="editor-field">
+			<input type="text" value="100" id="Ctrl1Y" />
+		</div>
+		<div class="editor-label">
+			<label for="UserName">Ctrl2 X</label>
+		</div>
+		<div class="editor-field">
+			<input type="text" value=" 5" id="Ctrl2X" />
+		</div>
+		<div class="editor-label">
+			<label for="UserName">Ctrl2 Y</label>
+		</div>
+		<div class="editor-field">
+			<input type="text" value="200" id="Ctrl2Y" />
+		</div>
+
+	</div>
+
+	<div class="col2">
+	<div class="pathHolder">
+	</div>
+	</div>
+
+</body>
+</html>
